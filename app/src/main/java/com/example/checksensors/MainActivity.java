@@ -30,62 +30,64 @@ import java.io.OutputStreamWriter;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener {
-    private static final String TAG = "YarikRazrabotchik";
-    boolean WriteOn;
+    //и вот все ниже мне комментить теперь...
+    private static final String TAG = "YarikRazrabotchik";//Метка в логах,как ими пользоваться еще сам +- понял
+    boolean WriteOn;//Указывает записываются ли наши логи
     Button btnActTwo;
     SensorManager msensorManager;
     TextView text_main;
     TextView text_main2;
     private float[] accelData;
-    String LogAccel;
+    String LogAccel;//Содержимое файла
     long time_0 = 0;
-    private Activity thisActivity;
+    private Activity thisActivity;//так удобнее
 //лвлвллвлвв
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //инициализация массива хранения данных с асселерометра
+        //Проверка разрешения доступа к памяти для android 6.0+
         if (Build.VERSION.SDK_INT >= 23) {
-            //динамическое получение прав на INTERNET
+            //динамическое получение прав на доступ к памяти
             if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "Permission is granted");
-
-                //делаете что-то с интернетом
-
             } else {
                 Log.d(TAG, "Permission is revoked");
                 //запрашиваем разрешение
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
             }
         } else {
-
+            //если доступ не дали
         }
+        //ну тут тонна инициализации
         accelData = new float[3];
         msensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         WriteOn = false;
         LogAccel = "time(ms),Fx,Fy,Fz";
+        //запускаем главный слой
         setContentView(R.layout.activity_main);
-
-        btnActTwo = (Button) findViewById(R.id.button1);
+        //привязываемся к элементам XML файла
+        btnActTwo = findViewById(R.id.button1);
         text_main = findViewById(R.id.textView_main);
         text_main2 = findViewById(R.id.textView_main2);
-
+        //привязываем обработчик нажатий к общему интерфейсу onClick
         btnActTwo.setOnClickListener(this);
-        //writeFile();
-        //text_main2.setText(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE));
+
     }
 
     public void onClick(View v) {
-        Date date = new Date();
+
+        //в case помещаем id наших кнопок
         switch (v.getId()) {
             case R.id.button1:
+                //-----------------------------------------------
                 if(!WriteOn){
                     LogAccel = "time(ms),Fx,Fy,Fz";
                     WriteOn = true;
                     time_0 = System.currentTimeMillis();
                     btnActTwo.setText("Остановить запись");
                 }else{
+                    Date date = new Date();
                     String fullpath, foldername, filename;
                     foldername = "myFolder";
                     filename = date.toString() + "log.csv";
@@ -95,11 +97,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if(isExternalStorageWritable()){
                         SaveFile(fullpath,LogAccel);
                     }
-
                     WriteOn = false;
                     btnActTwo.setText("Запустить запись логов");
                 }
                 break;
+                //------------------------------------------------
+            //case R.id.
         }
     }
     @Override
@@ -127,30 +130,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
+        //просто есть в интерфейсе,без понятий для чего оно,но нужно оставить
     }
-    /*void writeFile() {
-        try {
-            // отрываем поток для записи
-
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
-                    openFileOutput("LogAcc" + date.toString(), MODE_PRIVATE)));
-            // пишем данные
-            bw.write(LogAccel);
-            // закрываем поток
-            bw.close();
-
-            text_main2.setText("Работает вроде");
-            Log.d("Тестим тестим", "Файл записан");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }*/
-    /* Проверяет, доступно ли external storage для чтения и записи */
     public boolean isExternalStorageWritable()
     {
+        //проверяет есть ли доступ к памяти
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state))
         {
