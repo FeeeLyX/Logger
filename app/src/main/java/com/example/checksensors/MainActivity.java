@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     String LogAccel;
     long time_0 = 0;
     private Activity thisActivity;
-
+//лвлвллвлвв
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
