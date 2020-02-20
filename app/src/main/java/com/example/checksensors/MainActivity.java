@@ -29,9 +29,54 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Date;
 
+class CheckSensor extends Thread
+{
+    @Override
+    public void run()
+    {
+        int temp;
+
+
+    }
+    //Название функции за себя явно говорил,но для одаренных: компанует содержимое в файл и сохраняет его в указанную директорию
+    public void SaveFile (String FileContent)
+    {
+        //Создание объекта файла.
+        Date date = new Date();
+        String fullpath, foldername, filename;
+        foldername = "myFolder";
+        filename = date.toString() + "log.csv";
+        fullpath = Environment.getExternalStorageDirectory()
+                + "/myFolder"
+                + "/" + filename;
+        File fhandle = new File(fullpath);
+        int hui = 0;
+        try
+        {
+            //Если нет директорий в пути, то они будут созданы:
+            if (!fhandle.getParentFile().exists()) {
+                hui = 1;
+                fhandle.getParentFile().mkdirs();
+            }
+            //Если файл существует, то он будет перезаписан:
+            boolean created = fhandle.createNewFile();
+            FileOutputStream fOut = new FileOutputStream(fhandle);
+            OutputStreamWriter myOutWriter = new OutputStreamWriter(fOut);
+            myOutWriter.write(FileContent);
+            myOutWriter.close();
+            fOut.close();
+        }
+        catch (IOException e)
+        {
+            //e.printStackTrace();
+            Log.d(MainActivity.TAG, "Path " + fhandle.getAbsolutePath() + ", " + e.toString());
+        }
+    }
+}
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener {
     //и вот все ниже мне комментить теперь...
-    private static final String TAG = "YarikRazrabotchik";//Метка в логах,как ими пользоваться еще сам +- понял
+    public static final String TAG = "YarikRazrabotchik";//Метка в логах,как ими пользоваться еще сам +- понял
     boolean WriteOn;//Указывает записываются ли наши логи
     Button btnActTwo;
     SensorManager msensorManager;
@@ -87,18 +132,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     time_0 = System.currentTimeMillis();
                     btnActTwo.setText("Остановить запись");
                 }else{
-                    Date date = new Date();
-                    String fullpath, foldername, filename;
-                    foldername = "myFolder";
-                    filename = date.toString() + "log.csv";
-                    fullpath = Environment.getExternalStorageDirectory()
-                            + "/myFolder"
-                            + "/" + filename;
+
                     if(isExternalStorageWritable()){
-                        SaveFile(fullpath,LogAccel);
+                        CheckSensor checkSensor = new CheckSensor();
+                        checkSensor.start();
+                        WriteOn = false;
+                        btnActTwo.setText("Запустить запись логов");
+                    }else{
+
                     }
-                    WriteOn = false;
-                    btnActTwo.setText("Запустить запись логов");
+
                 }
                 break;
                 //------------------------------------------------
@@ -132,9 +175,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
         //просто есть в интерфейсе,без понятий для чего оно,но нужно оставить
     }
+    //проверяет есть ли доступ к памяти
     public boolean isExternalStorageWritable()
     {
-        //проверяет есть ли доступ к памяти
+
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state))
         {
@@ -143,30 +187,4 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return false;
     }
 
-    public void SaveFile (String filePath, String FileContent)
-    {
-        //Создание объекта файла.
-        File fhandle = new File(filePath);
-        int hui = 0;
-        try
-        {
-            //Если нет директорий в пути, то они будут созданы:
-            if (!fhandle.getParentFile().exists()) {
-                hui = 1;
-                fhandle.getParentFile().mkdirs();
-            }
-            //Если файл существует, то он будет перезаписан:
-            boolean created = fhandle.createNewFile();
-            FileOutputStream fOut = new FileOutputStream(fhandle);
-            OutputStreamWriter myOutWriter = new OutputStreamWriter(fOut);
-            myOutWriter.write(FileContent);
-            myOutWriter.close();
-            fOut.close();
-        }
-        catch (IOException e)
-        {
-            //e.printStackTrace();
-            text_main2.setText("Path " + fhandle.getAbsolutePath() + ", " + e.toString());
-        }
-    }
 }
