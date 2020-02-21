@@ -1,3 +1,6 @@
+//Lysenko Y.A.
+
+
 package com.example.checksensors;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,7 +22,12 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.MultiAutoCompleteTextView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.w3c.dom.Text;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,25 +37,67 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Date;
 
+import static androidx.core.content.ContextCompat.getSystemService;
+
+//Лятеки-----------------------------------------------------------------------------------------------
 class CheckSensor extends Thread
 {
+    public static final String TAG = "YarikRazrabotchik";
+    private float[] accelDataWrite = new float[3];
+    private String LogAccelWrite= "time(ms),Fx,Fy,Fz";
+    private long time_0 = System.currentTimeMillis();
+    private String PathSaveFile;
+    private Context mContext;
     @Override
     public void run()
     {
-        int temp;
+        SensorManager msensorManager;
+        String sensorService= Context.SENSOR_SERVICE;
+        msensorManager = (SensorManager) mContext.getSystemService(sensorService);
+        SensorEventListener selMsensorManager = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                final int type = event.sensor.getType(); //Определяем тип датчика
+                if (type == Sensor.TYPE_ACCELEROMETER) { //Если акселерометр
+                    accelDataWrite = event.values.clone();
+                    LogAccelWrite += "\n" + (System.currentTimeMillis()-time_0) + "," + accelDataWrite[0] + "," + accelDataWrite[1] + "," + accelDataWrite[2];
 
+                }
+            }
 
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
+        msensorManager.registerListener(selMsensorManager,msensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),SensorManager.SENSOR_DELAY_FASTEST);
+        while(!interrupted()){
+            try {
+                sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        SaveFile(LogAccelWrite);
+        return;
+    }
+    public void setPathSaveFile(String temp){
+        PathSaveFile = temp;
+    }
+    public void setThis(Context mContext){
+        this.mContext = mContext;
     }
     //Название функции за себя явно говорил,но для одаренных: компанует содержимое в файл и сохраняет его в указанную директорию
-    public void SaveFile (String FileContent)
+    private void SaveFile (String FileContent)
     {
+        Toast.makeText(mContext,"Сохраняет",Toast.LENGTH_SHORT).show();
         //Создание объекта файла.
         Date date = new Date();
         String fullpath, foldername, filename;
-        foldername = "myFolder";
+        foldername = PathSaveFile;
         filename = date.toString() + "log.csv";
         fullpath = Environment.getExternalStorageDirectory()
-                + "/myFolder"
+                + "/" + foldername
                 + "/" + filename;
         File fhandle = new File(fullpath);
         int hui = 0;
@@ -65,6 +115,7 @@ class CheckSensor extends Thread
             myOutWriter.write(FileContent);
             myOutWriter.close();
             fOut.close();
+            Toast.makeText(mContext,"Сохранил",Toast.LENGTH_SHORT).show();
         }
         catch (IOException e)
         {
@@ -73,22 +124,23 @@ class CheckSensor extends Thread
         }
     }
 }
-
+//=================================================================================================================
 public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener {
     //и вот все ниже мне комментить теперь...
     public static final String TAG = "YarikRazrabotchik";//Метка в логах,как ими пользоваться еще сам +- понял
     boolean WriteOn;//Указывает записываются ли наши логи
     Button btnActTwo;
     SensorManager msensorManager;
-    TextView text_main;
-    TextView text_main2;
+    TextView textViewMain;
+    TextView textViewMain2;
+    public TextView textViewMain3;
     private float[] accelData;
-    String LogAccel;//Содержимое файла
-    long time_0 = 0;
     private Activity thisActivity;//так удобнее
+    CheckSensor checkSensor = new CheckSensor();
 //лвлвллвлвв
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        checkSensor.start();
         super.onCreate(savedInstanceState);
         //Проверка разрешения доступа к памяти для android 6.0+
         if (Build.VERSION.SDK_INT >= 23) {
@@ -106,53 +158,53 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         //ну тут тонна инициализации
         accelData = new float[3];
-        msensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        msensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         WriteOn = false;
-        LogAccel = "time(ms),Fx,Fy,Fz";
         //запускаем главный слой
         setContentView(R.layout.activity_main);
         //привязываемся к элементам XML файла
         btnActTwo = findViewById(R.id.button1);
-        text_main = findViewById(R.id.textView_main);
-        text_main2 = findViewById(R.id.textView_main2);
+        textViewMain = findViewById(R.id.textView_main);
+        textViewMain2 = findViewById(R.id.textView_main2);
+        textViewMain3 = findViewById(R.id.textView_main2);
         //привязываем обработчик нажатий к общему интерфейсу onClick
         btnActTwo.setOnClickListener(this);
 
     }
 
     public void onClick(View v) {
-
+        Log.d(TAG,"Клик");
         //в case помещаем id наших кнопок
         switch (v.getId()) {
             case R.id.button1:
                 //-----------------------------------------------
                 if(!WriteOn){
-                    LogAccel = "time(ms),Fx,Fy,Fz";
-                    WriteOn = true;
-                    time_0 = System.currentTimeMillis();
-                    btnActTwo.setText("Остановить запись");
-                }else{
-
                     if(isExternalStorageWritable()){
-                        CheckSensor checkSensor = new CheckSensor();
-                        checkSensor.start();
-                        WriteOn = false;
-                        btnActTwo.setText("Запустить запись логов");
+                        WriteOn = true;
+                        checkSensor.setThis(this);
+
+                        checkSensor.setPathSaveFile("myFolder");
                     }else{
 
                     }
-
+                    btnActTwo.setText("Остановить запись");
+                }else{
+                    checkSensor.interrupt();
+                    WriteOn = false;
+                    btnActTwo.setText("Запустить запись логов");
                 }
                 break;
                 //------------------------------------------------
             //case R.id.
         }
     }
+
     @Override
     protected void onResume(){
         super.onResume();
         msensorManager.registerListener(this,msensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),SensorManager.SENSOR_DELAY_NORMAL);
     }
+
     @Override
     protected void onPause(){
         super.onPause();
@@ -164,12 +216,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         final int type = event.sensor.getType(); //Определяем тип датчика
         if (type == Sensor.TYPE_ACCELEROMETER) { //Если акселерометр
             accelData = event.values.clone();
-            text_main.setText("X = " + accelData[0] + "\nY = " + accelData[1] + "\nZ = " + accelData[2]);
-            if(WriteOn){
-                LogAccel += "\n" + (System.currentTimeMillis()-time_0) + "," + accelData[0] + "," + accelData[1] + "," + accelData[2];
-            }
+            textViewMain.setText("X = " + accelData[0] + "\nY = " + accelData[1] + "\nZ = " + accelData[2]);
         }
-
     }
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -186,5 +234,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         return false;
     }
+
 
 }
