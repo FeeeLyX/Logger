@@ -19,6 +19,7 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Switch;
 import android.widget.TextView;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -27,21 +28,28 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.text.Format;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener {
     //и вот все ниже мне комментить теперь...
     private static final String TAG = "YarikRazrabotchik";//Метка в логах,как ими пользоваться еще сам +- понял
-    private boolean WriteOnAccel,WriteOnGyr;//Указывают какие датчики записываются в логи
+    private boolean WriteOnAccel,WriteOnGyro;//Указывают какие датчики записываются в логи
     private boolean WriteOn;//Указывает записываются ли наши логи
     private SensorManager msensorManager;//инициализируем менеджер по управлению датчиками
+
+    //константы
+    private final int Accel = 0;
+    private final int Gyro = 1;
 
     //инициализируем кнопочки
     private Button btnActTwo;
 
+    //свитчи
+    Switch textViewAccel_main;
+    Switch textViewGyro_main;
+
     //инициализруем текстовые блоки
-    private TextView textViewAccel_main;
-    private TextView textViewGyro_main;
     private TextView text_main2;
 
     //момент времени с начала измерения
@@ -78,14 +86,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //ну тут тонна инициализации
         accelData = new float[3];
         msensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        WriteOnGyr = WriteOnAccel = false;
+        WriteOnGyro = WriteOnAccel = false;
         //запускаем главный слой
         setContentView(R.layout.activity_main);
 
         //привязываемся к элементам XML файла
         btnActTwo = findViewById(R.id.button1);
-        textViewAccel_main = findViewById(R.id.textViewAccel_main);
-        textViewGyro_main = findViewById(R.id.textViewGyro_main);
+        textViewAccel_main = findViewById(R.id.switchAccel);
+        textViewGyro_main = findViewById(R.id.switchGyro);
         text_main2 = findViewById(R.id.textViewDebug_main);
 
         //привязываем обработчик нажатий к общему интерфейсу onClick
@@ -101,23 +109,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if(!WriteOn){
                     LogAccel = LogGyr = "time(ms),Fx,Fy,Fz";
                     WriteOn = true;
-
+                    WriteOnAccel = WriteOnGyro = true;
 
                     time_0 = System.currentTimeMillis();
-                    btnActTwo.setText("Остановить запись");
+                    btnActTwo.setText("STOP");
                 }else{
-                    Date date = new Date();
-                    String fullpath, foldername, filename;
-                    foldername = "myFolder";
-                    filename = date.toString() + "log.csv";
-                    fullpath = Environment.getExternalStorageDirectory()
-                            + "/myFolder"
-                            + "/" + filename;
-                    if(isExternalStorageWritable()){
-                        SaveFile(fullpath,LogAccel);
-                    }
-                    WriteOn = false;
-                    btnActTwo.setText("Запустить запись логов");
+                    SaveFile(Accel);
+                    SaveFile(Gyro);
+                    WriteOnAccel = WriteOnGyro = false;
+                    btnActTwo.setText("Start recording");
                 }
                 break;
                 //------------------------------------------------
@@ -150,8 +150,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             case Sensor.TYPE_GYROSCOPE:
                 gyrData = event.values.clone();
                 textViewGyro_main.setText("X = " + gyrData[0] + "\nY = " + gyrData[1] + "\nZ = " + gyrData[2]);
-                if(WriteOnGyr){
-                    LogGyr += "\n" + (System.currentTimeMillis()-time_0) + "," + accelData[0] + "," + accelData[1] + "," + accelData[2];
+                if(WriteOnGyro){
+                    LogGyr += "\n" + (System.currentTimeMillis()-time_0) + "," + gyrData[0] + "," + gyrData[1] + "," + gyrData[2];
                 }
                 break;
         }
@@ -172,16 +172,49 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return false;
     }
 
-    public void SaveFile (String filePath, String FileContent)
+
+
+    public void SaveFile(int NameSensor){
+        Date date = new Date();
+        String fullpath, foldername, filename;
+        foldername = "myFolder";
+        switch(NameSensor){
+            case Accel:
+                filename = "logAccel.csv";
+                break;
+            case Gyro:
+                filename = "logGyro"+ NameSensor + ".csv";
+                break;
+            default:
+                filename = "logGyroDef.csv";
+
+        }
+        fullpath = Environment.getExternalStorageDirectory()
+                + "/" + foldername
+                + "/" + date.toString()
+                + "/" + filename;
+        if(isExternalStorageWritable()){
+            switch(NameSensor){
+                case Accel:
+                    WriteInStorage(fullpath,LogAccel);
+                    break;
+                case Gyro:
+                    WriteInStorage(fullpath,LogGyr);
+                    break;
+                default:
+            }
+
+        }else text_main2.setText("Ошибка записи");
+        WriteOn = false;
+    }
+    public void WriteInStorage (String filePath, String FileContent)
     {
         //Создание объекта файла.
         File fhandle = new File(filePath);
-        int hui = 0;
         try
         {
             //Если нет директорий в пути, то они будут созданы:
             if (!fhandle.getParentFile().exists()) {
-                hui = 1;
                 fhandle.getParentFile().mkdirs();
             }
             //Если файл существует, то он будет перезаписан:
@@ -191,6 +224,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             myOutWriter.write(FileContent);
             myOutWriter.close();
             fOut.close();
+            text_main2.setText("Successfully saved");
         }
         catch (IOException e)
         {
