@@ -1,4 +1,4 @@
-package com.example.checksensors;
+package com.cinnabones.logger;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -117,7 +117,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         btnActTwo.setText("Nothing to record");
 
     }
-
 
 
     //Обработчик нажатий
