@@ -19,8 +19,10 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,9 +33,9 @@ import java.io.OutputStreamWriter;
 import java.text.Format;
 import java.util.Date;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener, Switch.OnCheckedChangeListener {
     //и вот все ниже мне комментить теперь...
-    private static final String TAG = "YarikRazrabotchik";//Метка в логах,как ими пользоваться еще сам +- понял
+    private static final String TAG = "Yarik&Danya";//Метка в логах,как ими пользоваться еще сам +- понял
     private boolean WriteOnAccel,WriteOnGyro;//Указывают какие датчики записываются в логи
     private boolean WriteOn;//Указывает записываются ли наши логи
     private SensorManager msensorManager;//инициализируем менеджер по управлению датчиками
@@ -48,6 +50,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //свитчи
     Switch textViewAccel_main;
     Switch textViewGyro_main;
+
+    boolean accelChecked = false;
+    boolean gyroChecked = false;
 
     //инициализруем текстовые блоки
     private TextView text_main2;
@@ -68,6 +73,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        setContentView(R.layout.activity_main);
+
         //Проверка разрешения доступа к памяти для android 6.0+
         if (Build.VERSION.SDK_INT >= 23) {
             //динамическое получение прав на доступ к памяти
@@ -96,10 +104,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         textViewGyro_main = findViewById(R.id.switchGyro);
         text_main2 = findViewById(R.id.textViewDebug_main);
 
+        textViewAccel_main.setOnCheckedChangeListener(this);
+        textViewGyro_main.setOnCheckedChangeListener(this);
+
         //привязываем обработчик нажатий к общему интерфейсу onClick
         btnActTwo.setOnClickListener(this);
 
+        textViewAccel_main.setChecked(false);
+        textViewGyro_main.setChecked(false);
+        textViewAccel_main.setText("Accelerometer\nx = \nz = \nz = ");
+        textViewGyro_main.setText("Gyroscope\nx = \ny = \nz = ");
+        btnActTwo.setText("Nothing to record");
+
     }
+
+
+
     //Обработчик нажатий
     public void onClick(View v) {
         //в case помещаем id наших кнопок
@@ -107,16 +127,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             case R.id.button1:
                 //-----------------------------------------------
                 if(!WriteOn){
-                    LogAccel = LogGyr = "time(ms),Fx,Fy,Fz";
-                    WriteOn = true;
-                    WriteOnAccel = WriteOnGyro = true;
-
-                    time_0 = System.currentTimeMillis();
-                    btnActTwo.setText("STOP");
+                    if(gyroChecked || accelChecked) {
+                        LogAccel = LogGyr = "time(ms),Fx,Fy,Fz";
+                        WriteOn = true;
+                        WriteOnAccel = accelChecked;
+                        WriteOnGyro = gyroChecked;
+                        textViewAccel_main.setClickable(false);
+                        textViewGyro_main.setClickable(false);
+                        time_0 = System.currentTimeMillis();
+                        btnActTwo.setText("STOP");
+                    }
                 }else{
-                    SaveFile(Accel);
-                    SaveFile(Gyro);
+                    if(WriteOnAccel) {
+                        SaveFile(Accel);
+                    }
+                    if(WriteOnGyro){
+                        SaveFile(Gyro);
+                    }
                     WriteOnAccel = WriteOnGyro = false;
+                    textViewAccel_main.setClickable(true);
+                    textViewGyro_main.setClickable(true);
                     btnActTwo.setText("Start recording");
                 }
                 break;
@@ -142,14 +172,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         switch (type){
             case Sensor.TYPE_ACCELEROMETER:  //Если акселерометр
                 accelData = event.values.clone();
-                textViewAccel_main.setText("X = " + accelData[0] + "\nY = " + accelData[1] + "\nZ = " + accelData[2]);
+                textViewAccel_main.setText("Accelerometer\nx = " + accelData[0] + "\ny = " + accelData[1] + "\nz = " + accelData[2]);
                 if(WriteOnAccel){
                     LogAccel += "\n" + (System.currentTimeMillis()-time_0) + "," + accelData[0] + "," + accelData[1] + "," + accelData[2];
                 }
                 break;
             case Sensor.TYPE_GYROSCOPE:
                 gyrData = event.values.clone();
-                textViewGyro_main.setText("X = " + gyrData[0] + "\nY = " + gyrData[1] + "\nZ = " + gyrData[2]);
+                textViewGyro_main.setText("Gyroscope\nx = " + gyrData[0] + "\ny = " + gyrData[1] + "\nz = " + gyrData[2]);
                 if(WriteOnGyro){
                     LogGyr += "\n" + (System.currentTimeMillis()-time_0) + "," + gyrData[0] + "," + gyrData[1] + "," + gyrData[2];
                 }
@@ -172,12 +202,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return false;
     }
 
-
-
     public void SaveFile(int NameSensor){
         Date date = new Date();
         String fullpath, foldername, filename;
-        foldername = "myFolder";
+        foldername = "Logger";
         switch(NameSensor){
             case Accel:
                 filename = "logAccel.csv";
@@ -224,12 +252,37 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             myOutWriter.write(FileContent);
             myOutWriter.close();
             fOut.close();
-            text_main2.setText("Successfully saved");
+            Toast toast = Toast.makeText(getApplicationContext(),
+                    "Saved successfully!", Toast.LENGTH_SHORT);
+            toast.show();
+            //text_main2.setText("");
         }
         catch (IOException e)
         {
             //e.printStackTrace();
             text_main2.setText("Path " + fhandle.getAbsolutePath() + ", " + e.toString());
+        }
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        switch (buttonView.getId()){
+            case R.id.switchAccel:
+                accelChecked = isChecked;
+                break;
+            case R.id.switchGyro:
+                gyroChecked = isChecked;
+                break;
+        }
+        Button b = findViewById(R.id.button1);
+        if (!gyroChecked && !accelChecked){
+
+            b.setClickable(false);
+            b.setText("Nothing to record");
+        }
+        else{
+            b.setClickable(true);
+            b.setText("Start recording");
         }
     }
 }
