@@ -6,7 +6,12 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.DashPathEffect;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.content.Context;
@@ -18,11 +23,19 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
+
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -70,9 +83,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //так удобнее
     private Activity thisActivity;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 
         setContentView(R.layout.activity_main);
 
@@ -102,7 +117,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         btnActTwo = findViewById(R.id.button1);
         textViewAccel_main = findViewById(R.id.switchAccel);
         textViewGyro_main = findViewById(R.id.switchGyro);
-        text_main2 = findViewById(R.id.textViewDebug_main);
 
         textViewAccel_main.setOnCheckedChangeListener(this);
         textViewGyro_main.setOnCheckedChangeListener(this);
@@ -115,7 +129,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         textViewAccel_main.setText("Accelerometer\nx = \nz = \nz = ");
         textViewGyro_main.setText("Gyroscope\nx = \ny = \nz = ");
         btnActTwo.setText("Nothing to record");
-
     }
 
 
@@ -153,12 +166,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //case R.id.
         }
     }
+
     @Override
     protected void onResume(){
         super.onResume();
         msensorManager.registerListener(this,msensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),SensorManager.SENSOR_DELAY_NORMAL);
         msensorManager.registerListener(this,msensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),SensorManager.SENSOR_DELAY_NORMAL);
     }
+
     @Override
     protected void onPause(){
         super.onPause();
@@ -186,10 +201,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
     }
+
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
         //просто есть в интерфейсе,без понятий для чего оно,но нужно оставить
     }
+
     public boolean isExternalStorageWritable()
     {
         //проверяет есть ли доступ к памяти
@@ -234,6 +251,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }else text_main2.setText("Ошибка записи");
         WriteOn = false;
     }
+
     public void WriteInStorage (String filePath, String FileContent)
     {
         //Создание объекта файла.
@@ -284,4 +302,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             b.setText("Start recording");
         }
     }
+
+
 }
+
