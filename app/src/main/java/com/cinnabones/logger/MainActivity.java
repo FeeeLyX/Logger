@@ -27,9 +27,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.text.DecimalFormat;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener, Switch.OnCheckedChangeListener {
+
+    DecimalFormat df = new DecimalFormat("###.###");
+
     //и вот все ниже мне комментить теперь...
     private static final String TAG = "Yarik&Danya";//Метка в логах,как ими пользоваться еще сам +- понял
     private boolean WriteOnAccel,WriteOnGyro;//Указывают какие датчики записываются в логи
@@ -169,14 +173,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         switch (type){
             case Sensor.TYPE_ACCELEROMETER:  //Если акселерометр
                 accelData = event.values.clone();
-                textViewAccel_main.setText("Accelerometer\nx = " + accelData[0] + "\ny = " + accelData[1] + "\nz = " + accelData[2]);
+                textViewAccel_main.setText("Accelerometer\nx = " + df.format(accelData[0]) + "\ny = " + df.format(accelData[1]) + "\nz = " + df.format(accelData[2]));
                 if(WriteOnAccel){
                     LogAccel += "\n" + (System.currentTimeMillis()-time_0) + "," + accelData[0] + "," + accelData[1] + "," + accelData[2];
                 }
                 break;
             case Sensor.TYPE_GYROSCOPE:
                 gyrData = event.values.clone();
-                textViewGyro_main.setText("Gyroscope\nx = " + gyrData[0] + "\ny = " + gyrData[1] + "\nz = " + gyrData[2]);
+                textViewGyro_main.setText("Gyroscope\nx = " + df.format(gyrData[0]) + "\ny = " + df.format(gyrData[1]) + "\nz = " + df.format(gyrData[2]));
                 if(WriteOnGyro){
                     LogGyr += "\n" + (System.currentTimeMillis()-time_0) + "," + gyrData[0] + "," + gyrData[1] + "," + gyrData[2];
                 }
