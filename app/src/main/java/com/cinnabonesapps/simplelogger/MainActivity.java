@@ -1,11 +1,17 @@
 package com.cinnabonesapps.simplelogger;
 
+import static android.provider.MediaStore.createWriteRequest;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.content.Context;
@@ -14,6 +20,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -22,11 +29,13 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Date;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
     //и вот все ниже мне комментить теперь...
     private static final String TAG = "YarikRazrabotchik";//Метка в логах,как ими пользоваться еще сам +- понял
     private boolean WriteOnAccel,WriteOnGyro;//Указывают какие датчики записываются в логи
@@ -92,33 +101,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         text_main2 = findViewById(R.id.textViewDebug_main);
 
         //привязываем обработчик нажатий к общему интерфейсу onClick
-        btnActTwo.setOnClickListener(this);
+        btnActTwo.setOnClickListener(v -> {
+            //-----------------------------------------------
+            if(!WriteOn){
+                LogAccel = LogGyr = "time(ms),Fx,Fy,Fz";
+                WriteOn = true;
+                WriteOnAccel = WriteOnGyro = true;
 
+                time_0 = System.currentTimeMillis();
+                btnActTwo.setText("STOP");
+            }else {
+                SaveFile(Accel);
+                SaveFile(Gyro);
+                WriteOnAccel = WriteOnGyro = false;
+                btnActTwo.setText("START RECORDING");
+            }
+            //------------------------------------------------
+        });
     }
-    //Обработчик нажатий
-    public void onClick(View v) {
-        //в case помещаем id наших кнопок
-        switch (v.getId()) {
-            case R.id.button1:
-                //-----------------------------------------------
-                if(!WriteOn){
-                    LogAccel = LogGyr = "time(ms),Fx,Fy,Fz";
-                    WriteOn = true;
-                    WriteOnAccel = WriteOnGyro = true;
 
-                    time_0 = System.currentTimeMillis();
-                    btnActTwo.setText("STOP");
-                }else{
-                    SaveFile(Accel);
-                    SaveFile(Gyro);
-                    WriteOnAccel = WriteOnGyro = false;
-                    btnActTwo.setText("Start recording");
-                }
-                break;
-                //------------------------------------------------
-            //case R.id.
-        }
-    }
+
     @Override
     protected void onResume(){
         super.onResume();
@@ -156,75 +158,62 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
         //просто есть в интерфейсе,без понятий для чего оно,но нужно оставить
     }
-    public boolean isExternalStorageWritable()
-    {
-        //проверяет есть ли доступ к памяти
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state))
-        {
-            return true;
-        }
-        return false;
-    }
-
-
 
     public void SaveFile(int NameSensor){
         Date date = new Date();
-        String fullpath, foldername, filename;
-        foldername = "myFolder";
+        String filename;
         switch(NameSensor){
             case Accel:
-                filename = "logAccel.csv";
+                filename = "logAccel";
                 break;
             case Gyro:
-                filename = "logGyro"+ NameSensor + ".csv";
+                filename = "logGyro";
                 break;
             default:
                 filename = "logGyroDef.csv";
 
         }
-        fullpath = Environment.getExternalStorageDirectory()
-                + "/" + foldername
-                + "/" + date.toString()
-                + "/" + filename;
-        if(isExternalStorageWritable()){
-            switch(NameSensor){
-                case Accel:
-                    WriteInStorage(fullpath,LogAccel);
-                    break;
-                case Gyro:
-                    WriteInStorage(fullpath,LogGyr);
-                    break;
-                default:
-            }
 
-        }else text_main2.setText("Ошибка записи");
+        Context context = getApplicationContext();
+        File dir = new File(context.getFilesDir(), "logs");
+        if(!dir.exists()){
+            dir.mkdir();
+        }
+
+        String body = "";
+        switch(NameSensor){
+            case Accel:
+                Log.i("test", "accelerometer");
+                body = LogAccel;
+                break;
+            case Gyro:
+                Log.i("test", "gyroscope");
+                body = LogGyr;
+                break;
+            default:
+        }
+
+        try {
+            ContentValues values = new ContentValues();
+
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);       //file name
+            values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");        //file extension, will automatically add to file
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS + "/simplelogs/");     //end "/" is not mandatory
+
+            Uri uri = getContentResolver().insert(MediaStore.Files.getContentUri("external"), values);      //important!
+
+            OutputStream outputStream = getContentResolver().openOutputStream(uri);
+
+            outputStream.write(body.getBytes());
+
+            outputStream.close();
+
+            text_main2.setText("File created successfully");
+
+        } catch (Exception e){
+            text_main2.setText("Fail to create file");
+            e.printStackTrace();
+        }
         WriteOn = false;
-    }
-    public void WriteInStorage (String filePath, String FileContent)
-    {
-        //Создание объекта файла.
-        File fhandle = new File(filePath);
-        try
-        {
-            //Если нет директорий в пути, то они будут созданы:
-            if (!fhandle.getParentFile().exists()) {
-                fhandle.getParentFile().mkdirs();
-            }
-            //Если файл существует, то он будет перезаписан:
-            boolean created = fhandle.createNewFile();
-            FileOutputStream fOut = new FileOutputStream(fhandle);
-            OutputStreamWriter myOutWriter = new OutputStreamWriter(fOut);
-            myOutWriter.write(FileContent);
-            myOutWriter.close();
-            fOut.close();
-            text_main2.setText("Successfully saved");
-        }
-        catch (IOException e)
-        {
-            //e.printStackTrace();
-            text_main2.setText("Path " + fhandle.getAbsolutePath() + ", " + e.toString());
-        }
     }
 }

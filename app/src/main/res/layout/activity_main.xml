@@ -16,7 +16,7 @@
             android:id="@+id/button1"
             android:layout_width="match_parent"
             android:layout_height="100dp"
-            android:text="Начать запись логов"
+            android:text="START RECORDING"
             android:textColor="#00b0e4" />
 
         <LinearLayout
